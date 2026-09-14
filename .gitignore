@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest & test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local frontend and processing artifacts
+node_modules/
+dist/
+build/
+.docxpress_data/
+.env
+.env.*
+!.env.example
+frontend/dist/
+*.tmp
+*.log
+benchmark*.docx
+*.formatted.docx

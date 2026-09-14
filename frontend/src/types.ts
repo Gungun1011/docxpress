@@ -1,0 +1,14 @@
+export type Screen = 'dashboard' | 'upload' | 'analysis' | 'structure' | 'specification' | 'processing' | 'validation' | 'comparison' | 'result' | 'documents'
+export type RequestState = 'idle' | 'loading' | 'success' | 'error'
+export type UploadResponse = { document_id: string; filename: string; size: number; status: string }
+export type ElementResponse = { element_id: string; type: string; confidence: number; detection_method?: string | null; reason?: string | null; text_preview?: string | null }
+export type AnalysisResponse = { document_id: string; status: string; total_elements: number; chapters: number; titles: number; authors: number; headings: number; subheadings: number; paragraphs: number; tables: number; figures: number; captions: number; lists: number; references: number; average_confidence: number; elements: ElementResponse[] }
+export type StatusResponse = { document_id: string; status: string; progress: number; current_stage: string; elapsed_seconds: number; error?: string | null }
+export type PreservationResponse = { is_identical: boolean; source_hash: string; output_hash: string; changed_elements: number[]; missing_elements: number[]; added_elements: number[] }
+export type FormattingResponse = { body_font?: string; body_size_pt?: number; body_alignment?: string; body_line_spacing?: number; body_first_indent_cm?: number; heading_1_size_pt?: number; subheading_size_pt?: number }
+export type ReportResponse = { document_id: string; filename: string; status: string; created_at: string; completed_at?: string | null; publication_profile?: string | null; formatting: FormattingResponse; statistics: Record<string, number>; elements: ElementResponse[]; processing: Record<string, number>; preservation?: PreservationResponse | null; warnings: string[]; errors: string[] }
+export type PresetResponse = { name: string; body_font: string; body_size_pt: number; body_alignment: string; body_line_spacing: number; body_first_indent_cm: number; heading_1_size_pt: number; subheading_size_pt: number }
+export type FormatRequest = { profile: string }
+export type HealthResponse = { status: string; service: string; version: string }
+export type PresetView = PresetResponse & { displayName: string; description: string; page: string }
+export type SessionState = { documentId: string | null; filename: string; fileSize: number; uploadState: RequestState; analysisState: RequestState; formatState: RequestState; processingState: RequestState; analysis: AnalysisResponse | null; status: StatusResponse | null; report: ReportResponse | null; presets: PresetView[]; selectedPreset: PresetView | null; error: string | null; backendReady: boolean }
