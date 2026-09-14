@@ -5,6 +5,29 @@ import os
 from pathlib import Path
 
 
+LOCAL_CORS_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
+
+
+def get_cors_origins() -> list[str]:
+    """Return local defaults plus explicitly configured frontend origins."""
+    configured_origins = os.getenv("DOCXPRESS_CORS_ORIGINS", "")
+    origins = list(LOCAL_CORS_ORIGINS)
+
+    for origin in configured_origins.split(","):
+        normalized_origin = origin.strip()
+        if not normalized_origin:
+            continue
+        if normalized_origin == "*":
+            raise ValueError("DOCXPRESS_CORS_ORIGINS must not contain '*'.")
+        if normalized_origin not in origins:
+            origins.append(normalized_origin)
+
+    return origins
+
+
 @dataclass(frozen=True)
 class Settings:
     """System-wide configuration settings."""

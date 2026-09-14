@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import io
 import zipfile
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -21,6 +22,63 @@ def _docx_bytes(tmp_path: Path) -> bytes:
     source = tmp_path / "sample.docx"
     generate_deterministic_sample(source)
     return source.read_bytes()
+
+
+def test_api_health_alias_and_frontend_routes(tmp_path: Path):
+    frontend_dist = tmp_path / "frontend" / "dist"
+    frontend_dist.mkdir(parents=True)
+    (frontend_dist / "index.html").write_text("<html><body>DocXpress</body></html>", encoding="utf-8")
+    (frontend_dist / "asset.txt").write_text("asset", encoding="utf-8")
+    client = TestClient(
+        create_app(
+            DocumentJobService(root_dir=tmp_path / "jobs"),
+            frontend_dist=frontend_dist,
+        )
+    )
+
+    assert client.get("/api/health").json()["status"] == "ok"
+    assert client.get("/").text == "<html><body>DocXpress</body></html>"
+    assert client.get("/documents/example").text == "<html><body>DocXpress</body></html>"
+    assert client.get("/asset.txt").text == "asset"
+    missing_api = client.get("/api/not-a-real-endpoint")
+    assert missing_api.status_code == 404
+    assert "DocXpress" not in missing_api.text
+
+
+def test_cors_allows_local_development_origin_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("DOCXPRESS_CORS_ORIGINS", raising=False)
+    client = _client(tmp_path)
+
+    response = client.get("/health", headers={"Origin": "http://localhost:5173"})
+
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "access-control-allow-credentials" not in response.headers
+
+
+def test_cors_allows_configured_production_origins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(
+        "DOCXPRESS_CORS_ORIGINS",
+        "https://docxpress-frontend.onrender.com, https://www.example.test ",
+    )
+    client = _client(tmp_path)
+
+    render_response = client.get(
+        "/health",
+        headers={"Origin": "https://docxpress-frontend.onrender.com"},
+    )
+    second_response = client.get("/health", headers={"Origin": "https://www.example.test"})
+    unconfigured_response = client.get("/health", headers={"Origin": "https://malicious.example"})
+
+    assert render_response.headers["access-control-allow-origin"] == "https://docxpress-frontend.onrender.com"
+    assert second_response.headers["access-control-allow-origin"] == "https://www.example.test"
+    assert "access-control-allow-origin" not in unconfigured_response.headers
+
+
+def test_cors_rejects_wildcard_configuration(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("DOCXPRESS_CORS_ORIGINS", "*")
+
+    with pytest.raises(ValueError, match="must not contain"):
+        create_app()
 
 
 def test_health_and_presets(tmp_path: Path):

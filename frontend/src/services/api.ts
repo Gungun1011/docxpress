@@ -1,9 +1,11 @@
 import type { AnalysisResponse, FormatRequest, HealthResponse, PresetResponse, ReportResponse, StatusResponse, UploadResponse } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+const API_BASE_URL = import.meta.env.DEV
+  ? (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000')
+  : ''
 
 export const api = {
-  health: () => request<HealthResponse>('/health'),
+  health: () => request<HealthResponse>('/api/health'),
   getPresets: () => request<{ profiles: PresetResponse[] }>('/api/presets'),
   async uploadDocument(file: File) { const form = new FormData(); form.append('file', file, file.name); return request<UploadResponse>('/api/documents/upload', { method: 'POST', body: form }) },
   analyzeDocument: (id: string) => request<AnalysisResponse>(`/api/documents/${id}/analyze`, { method: 'POST' }),

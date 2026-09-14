@@ -38,6 +38,8 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Set `VITE_API_BASE_URL` to point at the local backend when it is not running on the default `http://127.0.0.1:8000`.
+Set `VITE_API_BASE_URL` to point at the local backend when it is not running on
+the default `http://127.0.0.1:8000`. Production builds use same-origin
+relative `/api/...` paths and do not require a backend URL.
 
 The UI uses real backend responses for upload, analysis, structure detection, presets, formatting status, validation, comparison data, and DOCX download. It does not provide persistent history or rendered page previews because those capabilities are not exposed by the backend.

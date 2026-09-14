@@ -35,6 +35,7 @@ def create_router(service: DocumentJobService) -> APIRouter:
         return HTTPException(status_code=status_code, detail={"code": "document_error", "message": message})
 
     @router.get("/health", response_model=HealthResponse, tags=["health"])
+    @router.get("/api/health", response_model=HealthResponse, tags=["health"])
     def health() -> HealthResponse:
         return HealthResponse(status="ok", service=settings.PROJECT_NAME, version=settings.VERSION)
 

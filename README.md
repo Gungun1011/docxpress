@@ -33,7 +33,40 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-The frontend uses `VITE_API_BASE_URL` when set and otherwise targets `http://127.0.0.1:8000`.
+During local Vite development, `VITE_API_BASE_URL` can point to the backend
+and otherwise defaults to `http://127.0.0.1:8000`. Production builds use
+same-origin relative API paths.
+
+### CORS configuration
+
+The backend always allows the local development origins
+`http://localhost:5173` and `http://127.0.0.1:5173`. Additional origins can be
+provided through the comma-separated `DOCXPRESS_CORS_ORIGINS` environment
+variable when needed for local development.
+
+The API does not enable credentialed CORS requests.
+
+## Single-service Render deployment
+
+The repository includes a multi-stage [Dockerfile](./Dockerfile) that builds
+the Vite frontend and runs it from the same FastAPI Web Service. The container
+serves the production UI at `/`, serves client-side routes with the SPA
+fallback, and keeps `/api/*` requests routed to FastAPI.
+
+Configure the Render service as a **Docker Web Service** using the repository
+root as its context. The Dockerfile is required for a deterministic build
+because it provides Node/npm for `npm ci` and `npm run build` before installing
+and starting the Python application. Render does not need a separate build or
+start command for Docker services; the Dockerfile runs the equivalent of:
+
+```text
+Build: docker build .
+Start: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Set `DOCXPRESS_CORS_ORIGINS` only if local development needs browser requests
+from another origin. Production UI and API requests are same-origin and use
+relative `/api/...` paths.
 
 ## Project Structure
 
@@ -70,7 +103,7 @@ npm run build
 
 Observed repository status at the final audit:
 
-- Python suite: 81 passed, 3 pre-existing NLP failures.
+- Python suite: 84 passed, 3 pre-existing NLP failures.
 - Frontend lint: passed.
 - Frontend production build: passed.
 
