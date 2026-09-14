@@ -5,7 +5,7 @@ the input file, extracting paragraphs, runs, tables, images, and metadata.
 """
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 import uuid
 
 import docx

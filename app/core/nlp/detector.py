@@ -5,7 +5,7 @@ when explicit regex prefixes or Word styles are absent.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.nlp.extractor import NLPFeatureExtractor
 from app.core.nlp.schemas import NLPElementFeatures
