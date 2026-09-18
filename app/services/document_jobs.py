@@ -46,6 +46,7 @@ class DocumentJob:
     classified_document: Optional[CanonicalDocument] = None
     format_result: Any = None
     stage_timings: Dict[str, float] = field(default_factory=dict)
+    model_type: str = "logistic_regression"
 
 
 class DocumentJobService:
@@ -109,14 +110,18 @@ class DocumentJobService:
         self.jobs[document_id] = job
         return job
 
-    def analyze(self, document_id: str) -> DocumentJob:
+    def analyze(self, document_id: str, model_type: str = "logistic_regression") -> DocumentJob:
         job = self.get(document_id)
+        if model_type not in {"logistic_regression", "decision_tree"}:
+            raise DocumentJobError(f"Unknown ML model: {model_type}")
         started = time.perf_counter()
         try:
             job.status, job.current_stage, job.progress = "parsing", "parsing", 0
             parsed = self.parser.parse(job.input_path)
             job.status, job.current_stage, job.progress = "analyzing", "analyzing", 50
-            classified, report = self.classifier.classify_document(parsed)
+            classifier = HybridStructureClassifier(model_type=model_type)
+            classified, report = classifier.classify_document(parsed)
+            job.model_type = model_type
             job.classified_document, job.analysis = classified, report
             job.stage_timings["analysis"] = time.perf_counter() - started
             job.status, job.current_stage, job.progress = "completed", "analysis complete", 100
@@ -127,12 +132,12 @@ class DocumentJobService:
             self.logger.exception("Document analysis failed: %s", type(exc).__name__)
             raise DocumentJobError("Analysis failed") from exc
 
-    def format(self, document_id: str, profile: str) -> DocumentJob:
+    def format(self, document_id: str, profile: str, model_type: str = "logistic_regression") -> DocumentJob:
         job = self.get(document_id)
         if profile not in PUBLICATION_PROFILES:
             raise DocumentJobError(f"Unknown publication profile: {profile}")
-        if job.classified_document is None or job.analysis is None:
-            self.analyze(document_id)
+        if job.classified_document is None or job.analysis is None or job.model_type != model_type:
+            self.analyze(document_id, model_type=model_type)
         job_dir = job.input_path.parent
         job.output_path = job_dir / f"{job.input_path.stem}.formatted.docx"
         started = time.perf_counter()

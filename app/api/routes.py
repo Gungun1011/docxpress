@@ -63,7 +63,7 @@ def create_router(service: DocumentJobService) -> APIRouter:
     @router.post("/api/documents/{document_id}/format", response_model=StatusResponse, tags=["documents"])
     def format_document(document_id: str, request: FormatRequest) -> StatusResponse:
         try:
-            job = service.format(document_id, request.profile)
+            job = service.format(document_id, request.profile, request.model)
         except DocumentJobError as exc:
             raise expected_error(exc) from exc
         return _status_response(job)
@@ -129,7 +129,7 @@ def _status_response(job: DocumentJob) -> StatusResponse:
     )
 
 
-def _elements(report) -> List[ElementResponse]:
+def _elements(report, formatting_by_id=None) -> List[ElementResponse]:
     return [
         ElementResponse(
             element_id=element.element_id,
@@ -138,6 +138,7 @@ def _elements(report) -> List[ElementResponse]:
             detection_method=element.detection_tier,
             reason=element.rule_applied,
             text_preview=element.original_text[:160] if element.original_text else None,
+            applied_formatting=(formatting_by_id or {}).get(element.element_id),
         )
         for element in report.elements
     ]
@@ -191,6 +192,11 @@ def _report_response(job: DocumentJob) -> ReportResponse:
         "body_first_indent_cm": profile.body_first_indent_cm,
         "heading_1_size_pt": profile.heading_1_size_pt,
         "subheading_size_pt": profile.subheading_size_pt,
+        "title_size_pt": profile.title_size_pt,
+        "author_size_pt": profile.author_size_pt,
+        "caption_size_pt": profile.caption_size_pt,
+        "table_size_pt": profile.table_size_pt,
+        "selected_model": job.model_type,
     } if profile else {}
     return ReportResponse(
         document_id=job.document_id,
@@ -201,7 +207,7 @@ def _report_response(job: DocumentJob) -> ReportResponse:
         publication_profile=job.format_result.profile_name if job.format_result else None,
         formatting=formatting,
         statistics=statistics,
-        elements=_elements(report) if report else [],
+        elements=_elements(report, job.format_result.element_formatting if job.format_result else None) if report else [],
         processing=dict(job.stage_timings),
         preservation=preservation,
         errors=[job.error] if job.error else [],

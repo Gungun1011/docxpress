@@ -9,7 +9,7 @@ export const api = {
   getPresets: () => request<{ profiles: PresetResponse[] }>('/api/presets'),
   async uploadDocument(file: File) { const form = new FormData(); form.append('file', file, file.name); return request<UploadResponse>('/api/documents/upload', { method: 'POST', body: form }) },
   analyzeDocument: (id: string) => request<AnalysisResponse>(`/api/documents/${id}/analyze`, { method: 'POST' }),
-  formatDocument: (id: string, profile: string) => { const body: FormatRequest = { profile }; return request<StatusResponse>(`/api/documents/${id}/format`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }) },
+  formatDocument: (id: string, profile: string, model = 'logistic_regression') => { const body: FormatRequest = { profile, model }; return request<StatusResponse>(`/api/documents/${id}/format`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }) },
   getDocumentStatus: (id: string) => request<StatusResponse>(`/api/documents/${id}/status`),
   getDocumentReport: (id: string) => request<ReportResponse>(`/api/documents/${id}/report`),
   async downloadDocument(id: string) { let response: Response; try { response = await fetch(`${API_BASE_URL}/api/documents/${id}/download`) } catch { throw new Error('DocXpress backend is unavailable.') } if (!response.ok) throw await readError(response); return { blob: await response.blob(), filename: filenameFromDisposition(response.headers.get('content-disposition')) } },

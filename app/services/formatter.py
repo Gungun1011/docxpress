@@ -1,9 +1,9 @@
 """Formatting-only DOCX publication service."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import time
-from typing import Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import docx
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
@@ -35,7 +35,7 @@ class PublicationProfile:
     right_margin_cm: float = 1.96
     heading_1_size_pt: float = 16.0
     subheading_size_pt: float = 12.0
-    title_size_pt: float = 20.0
+    title_size_pt: float = 18.0
     author_size_pt: float = 12.0
     caption_size_pt: float = 10.0
     reference_size_pt: float = 10.0
@@ -79,6 +79,7 @@ class FormattingResult:
     elements_processed: int
     preservation: ContentPreservationReport
     progress_events: int = 0
+    element_formatting: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 class PublicationFormatter:
@@ -107,11 +108,23 @@ class PublicationFormatter:
         blocks = word_doc.iter_inner_content()
         total = len(source_doc.elements)
         progress_events = 0
+        element_formatting: Dict[str, Dict[str, Any]] = {}
         for index, (block, element) in enumerate(zip(blocks, source_doc.elements), start=1):
             if hasattr(block, "paragraph_format"):
-                self._format_paragraph(block, element, selected_profile)
+                applied = self._format_paragraph(block, element, selected_profile)
             else:
-                self._format_table(block, selected_profile)
+                applied = self._format_table(block, selected_profile)
+            element_formatting[element.element_id] = applied
+            self.logger.info(
+                "Formatting element=%s type=%s profile=%s font=%s size_pt=%s alignment=%s spacing=%s",
+                element.element_id,
+                applied["element_type"],
+                selected_profile.name,
+                applied["font"],
+                applied["font_size_pt"],
+                applied["alignment"],
+                applied["line_spacing"],
+            )
             if progress_callback is not None:
                 progress_callback(FormattingProgress(index, total, time.perf_counter() - started))
                 progress_events += 1
@@ -136,6 +149,7 @@ class PublicationFormatter:
             elements_processed=total,
             preservation=report,
             progress_events=progress_events,
+            element_formatting=element_formatting,
         )
 
     @staticmethod
@@ -156,7 +170,7 @@ class PublicationFormatter:
             section.right_margin = Cm(profile.right_margin_cm)
 
     @classmethod
-    def _format_paragraph(cls, paragraph, element, profile: PublicationProfile) -> None:
+    def _format_paragraph(cls, paragraph, element, profile: PublicationProfile) -> Dict[str, Any]:
         element_type = getattr(element, "element_type", element)
         style_name = getattr(element, "original_style", None) or ""
         style_name = style_name.lower()
@@ -186,19 +200,22 @@ class PublicationFormatter:
             size, bold, alignment = profile.title_size_pt, True, WD_ALIGN_PARAGRAPH.CENTER
             fmt.first_line_indent = Cm(0)
         elif element_type == ElementType.AUTHOR:
-            size, italic, alignment = profile.author_size_pt, True, WD_ALIGN_PARAGRAPH.CENTER
+            size, alignment = profile.author_size_pt, WD_ALIGN_PARAGRAPH.CENTER
             fmt.first_line_indent = Cm(0)
         elif element_type == ElementType.CHAPTER:
             size, bold = profile.heading_1_size_pt, True
+            alignment = WD_ALIGN_PARAGRAPH.LEFT
             fmt.first_line_indent = Cm(0)
             fmt.page_break_before = True
             fmt.keep_with_next = True
         elif element_type == ElementType.HEADING:
             size, bold = profile.heading_1_size_pt, True
+            alignment = WD_ALIGN_PARAGRAPH.LEFT
             fmt.first_line_indent = Cm(0)
             fmt.keep_with_next = True
         elif element_type == ElementType.SUBHEADING:
             size, bold = profile.subheading_size_pt, True
+            alignment = WD_ALIGN_PARAGRAPH.LEFT
             fmt.first_line_indent = Cm(0)
             fmt.keep_with_next = True
         elif element_type == ElementType.CAPTION:
@@ -212,6 +229,11 @@ class PublicationFormatter:
             size, alignment = profile.list_size_pt, WD_ALIGN_PARAGRAPH.LEFT
             fmt.first_line_indent = Cm(-0.635)
             fmt.left_indent = Cm(0.635)
+        elif element_type == ElementType.TABLE:
+            size, alignment = profile.table_size_pt, WD_ALIGN_PARAGRAPH.LEFT
+            fmt.line_spacing = 1.0
+            fmt.line_spacing_rule = WD_LINE_SPACING.SINGLE
+            fmt.first_line_indent = Cm(0)
         elif element_type == ElementType.FIGURE:
             fmt.first_line_indent = Cm(0)
             alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -223,9 +245,28 @@ class PublicationFormatter:
             if element_type not in (ElementType.BODY_PARAGRAPH, ElementType.PARAGRAPH):
                 run.bold = bold
                 run.italic = italic
+        return {
+            "element_type": element_type.value if isinstance(element_type, ElementType) else str(element_type),
+            "font": profile.body_font,
+            "font_size_pt": size,
+            "alignment": cls._alignment_name(alignment),
+            "line_spacing": fmt.line_spacing,
+            "first_line_indent_cm": fmt.first_line_indent.cm if fmt.first_line_indent else 0,
+            "bold": bold,
+            "italic": italic,
+        }
 
     @staticmethod
-    def _format_table(table, profile: PublicationProfile) -> None:
+    def _alignment_name(alignment: int) -> str:
+        return {
+            WD_ALIGN_PARAGRAPH.LEFT: "left",
+            WD_ALIGN_PARAGRAPH.CENTER: "center",
+            WD_ALIGN_PARAGRAPH.RIGHT: "right",
+            WD_ALIGN_PARAGRAPH.JUSTIFY: "justified",
+        }.get(alignment, "inherit")
+
+    @staticmethod
+    def _format_table(table, profile: PublicationProfile) -> Dict[str, Any]:
         table.autofit = True
         for row_index, row in enumerate(table.rows):
             for cell in row.cells:
@@ -234,6 +275,16 @@ class PublicationFormatter:
                     for run in paragraph.runs:
                         run.font.size = Pt(profile.table_size_pt)
                         run.bold = row_index == 0
+        return {
+            "element_type": ElementType.TABLE.value,
+            "font": profile.body_font,
+            "font_size_pt": profile.table_size_pt,
+            "alignment": "left",
+            "line_spacing": 1.0,
+            "first_line_indent_cm": 0,
+            "bold": False,
+            "table_header_bold": True,
+        }
 
 
 FormatterEngine = PublicationFormatter

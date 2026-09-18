@@ -56,6 +56,7 @@ class RegexRuleEngine:
     RE_NUMBERED_LIST = re.compile(
         r"^(\d+[\.\)]|\([0-9]+\)|[a-zA-Z][\.\)]|\([a-zA-Z]\))\s+"
     )
+    RE_SHORT_TITLE_HEADING = re.compile(r"^[A-Z][\w'-]*(?:\s+[A-Za-z][\w'-]*){1,5}$")
     RE_REFERENCE_NUMERIC = re.compile(
         r"^\[\d+\]\s+[A-Z]"
     )
@@ -225,6 +226,23 @@ class RegexRuleEngine:
                     rule_name="rule_list_regex_marker",
                     reason="Starts with bullet character or numbered list prefix",
                 )
+
+        # Short title-case labels are common unstyled headings. This is deliberately
+        # restricted to non-sentence text so ordinary list items remain lists/body.
+        if (
+            doc_position >= 0.10
+            and
+            cls.RE_SHORT_TITLE_HEADING.match(text)
+            and not text.endswith((".", ":", "?", "!"))
+            and len(text.split()) <= 6
+        ):
+            return RuleMatch(
+                matched=True,
+                element_type=ElementType.HEADING,
+                confidence=0.93,
+                rule_name="rule_short_title_heading",
+                reason="Short title-case label without list or sentence punctuation",
+            )
 
         # Rule 10: Title and Author in Front-Matter
         if doc_position < 0.10:

@@ -50,6 +50,23 @@ def test_formatter_preserves_tables_images_lists_and_headings(deterministic_samp
     assert any(element.original_text.startswith("Chapter 1") for element in parsed.elements)
 
 
+def test_formatter_applies_element_specific_profiles(deterministic_sample_path: Path, tmp_path: Path):
+    output_path = tmp_path / "typed-formatted.docx"
+    result = PublicationFormatter().format_document(deterministic_sample_path, output_path)
+    profiles = result.element_formatting
+
+    ordered_profiles = list(profiles.values())
+    assert ordered_profiles[0]["font_size_pt"] == 18.0
+    assert ordered_profiles[0]["alignment"] == "center"
+    assert ordered_profiles[2]["font_size_pt"] == 16.0
+    assert ordered_profiles[3]["font_size_pt"] == 12.0
+    assert ordered_profiles[4]["alignment"] == "justified"
+    assert ordered_profiles[9]["font_size_pt"] == 10.0
+    table_profile = next(profile for profile in profiles.values() if profile["element_type"] == "table")
+    assert table_profile["font_size_pt"] == 10.0
+    assert result.preservation.is_identical
+
+
 def test_formatter_handles_unicode_and_empty_documents(unicode_doc_path: Path, empty_doc_path: Path, tmp_path: Path):
     formatter = PublicationFormatter()
     unicode_output = tmp_path / "unicode.docx"

@@ -20,6 +20,7 @@ class ElementResponse(BaseModel):
     detection_method: Optional[str] = None
     reason: Optional[str] = None
     text_preview: Optional[str] = None
+    applied_formatting: Optional[Dict[str, Any]] = None
 
 
 class AnalysisResponse(BaseModel):
@@ -43,6 +44,7 @@ class AnalysisResponse(BaseModel):
 
 class FormatRequest(BaseModel):
     profile: str = Field(default="hackathon_default")
+    model: str = Field(default="logistic_regression")
 
 
 class PreservationResponse(BaseModel):
