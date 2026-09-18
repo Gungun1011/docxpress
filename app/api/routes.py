@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 
 from app.api.schemas import (
     AnalysisResponse,
+    AnalyzeRequest,
     ElementResponse,
     FormatRequest,
     HealthResponse,
@@ -54,9 +55,9 @@ def create_router(service: DocumentJobService) -> APIRouter:
         )
 
     @router.post("/api/documents/{document_id}/analyze", response_model=AnalysisResponse, tags=["documents"])
-    def analyze_document(document_id: str) -> AnalysisResponse:
+    def analyze_document(document_id: str, request: AnalyzeRequest | None = None) -> AnalysisResponse:
         try:
-            job = service.analyze(document_id)
+            job = service.analyze(document_id, model_type=request.model if request else "logistic_regression")
         except DocumentJobError as exc:
             raise expected_error(exc) from exc
         return _analysis_response(job)
@@ -163,6 +164,7 @@ def _analysis_response(job: DocumentJob) -> AnalysisResponse:
     return AnalysisResponse(
         document_id=job.document_id,
         status=job.status,
+        selected_model=job.model_type,
         total_elements=report.total_elements,
         chapters=counts.get("chapter", 0),
         titles=counts.get("title", 0),

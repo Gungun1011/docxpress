@@ -111,8 +111,9 @@ def test_upload_analyze_format_status_report_download_e2e(tmp_path: Path):
     assert response.status_code == 201
     document_id = response.json()["document_id"]
 
-    analysis = client.post(f"/api/documents/{document_id}/analyze")
+    analysis = client.post(f"/api/documents/{document_id}/analyze", json={"model": "decision_tree"})
     assert analysis.status_code == 200
+    assert analysis.json()["selected_model"] == "decision_tree"
     assert analysis.json()["total_elements"] > 0
     assert analysis.json()["tables"] >= 1
     assert analysis.json()["figures"] >= 1

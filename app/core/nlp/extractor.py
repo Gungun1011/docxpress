@@ -52,6 +52,7 @@ class NLPFeatureExtractor:
     RE_ROMAN = re.compile(r"\b[IVXLCDM]+\b")
     RE_NUMBER_PREFIX = re.compile(r"^\d+")
     RE_NUMBERING_MARKER = re.compile(r"^(?:\d+[\.\)]|[\*\-\•\–\—\◦\▪\▫\►\⁃]|\([0-9a-zA-Z]\))\s+")
+    TITLE_CASE_MINOR_WORDS = {"a", "an", "and", "as", "at", "but", "by", "for", "in", "nor", "of", "on", "or", "the", "to", "via"}
 
     def __init__(self) -> None:
         """Initializes NLTK resources with graceful fallback."""
@@ -114,7 +115,15 @@ class NLPFeatureExtractor:
         uppercase_ratio = float(upper_chars) / float(alpha_count) if alpha_count > 0 else 0.0
 
         is_all_caps = text.isupper() and word_count >= 1
-        is_title_case = text.istitle() and word_count > 1
+        title_words = [word for word in re.findall(r"[A-Za-z][A-Za-z'-]*", text) if word]
+        is_title_case = (
+            len(title_words) > 1
+            and all(
+                word[0].isupper() if index == 0 or word.lower() not in self.TITLE_CASE_MINOR_WORDS else True
+                for index, word in enumerate(title_words)
+            )
+            and any(word[0].isupper() for word in title_words)
+        )
 
         # 3. Punctuation analysis
         ends_with_period = text.endswith(".")
@@ -130,7 +139,11 @@ class NLPFeatureExtractor:
         # 5. Surrounding context
         prev_word_count = len(self.tokenize_words(prev_elem.original_text)) if prev_elem else 0
         next_word_count = len(self.tokenize_words(next_elem.original_text)) if next_elem else 0
-        is_isolated = bool(word_count < 20 and (prev_word_count > 25 or next_word_count > 25))
+        is_isolated = bool(
+            word_count < 20
+            and (prev_word_count > 10 or next_word_count > 10)
+            and (prev_word_count > word_count * 2 or next_word_count > word_count * 2)
+        )
 
         # 6. Keyword patterns
         contains_chapter_keyword = bool(self.RE_CHAPTER.search(text))

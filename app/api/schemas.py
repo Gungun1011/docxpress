@@ -26,6 +26,7 @@ class ElementResponse(BaseModel):
 class AnalysisResponse(BaseModel):
     document_id: str
     status: str
+    selected_model: str
     total_elements: int
     chapters: int = 0
     titles: int = 0
@@ -40,6 +41,10 @@ class AnalysisResponse(BaseModel):
     references: int = 0
     average_confidence: float
     elements: List[ElementResponse]
+
+
+class AnalyzeRequest(BaseModel):
+    model: str = Field(default="logistic_regression")
 
 
 class FormatRequest(BaseModel):
