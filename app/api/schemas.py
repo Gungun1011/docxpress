@@ -47,6 +47,31 @@ class FormatRequest(BaseModel):
     model: str = Field(default="logistic_regression")
 
 
+class PublicationPresetResponse(BaseModel):
+    name: str
+    body_font: str
+    body_size_pt: float
+    body_alignment: str
+    body_line_spacing: float
+    body_first_indent_cm: float
+    heading_1_size_pt: float
+    subheading_size_pt: float
+    title_size_pt: float
+    author_size_pt: float
+    caption_size_pt: float
+    reference_size_pt: float
+    list_size_pt: float
+    table_size_pt: float
+    top_margin_cm: float
+    bottom_margin_cm: float
+    left_margin_cm: float
+    right_margin_cm: float
+
+
+class PublicationPresetsResponse(BaseModel):
+    profiles: List[PublicationPresetResponse]
+
+
 class PreservationResponse(BaseModel):
     is_identical: bool
     source_hash: str

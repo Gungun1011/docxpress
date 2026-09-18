@@ -12,6 +12,7 @@ from app.api.schemas import (
     FormatRequest,
     HealthResponse,
     PreservationResponse,
+    PublicationPresetsResponse,
     ReportResponse,
     StatusResponse,
     UploadResponse,
@@ -96,10 +97,10 @@ def create_router(service: DocumentJobService) -> APIRouter:
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
-    @router.get("/api/presets", response_model=Dict[str, Any], tags=["documents"])
-    def presets() -> Dict[str, Any]:
-        return {
-            "profiles": [
+    @router.get("/api/presets", response_model=PublicationPresetsResponse, tags=["documents"])
+    def presets() -> PublicationPresetsResponse:
+        return PublicationPresetsResponse(
+            profiles=[
                 {
                     "name": profile.name,
                     "body_font": profile.body_font,
@@ -109,10 +110,20 @@ def create_router(service: DocumentJobService) -> APIRouter:
                     "body_first_indent_cm": profile.body_first_indent_cm,
                     "heading_1_size_pt": profile.heading_1_size_pt,
                     "subheading_size_pt": profile.subheading_size_pt,
+                    "title_size_pt": profile.title_size_pt,
+                    "author_size_pt": profile.author_size_pt,
+                    "caption_size_pt": profile.caption_size_pt,
+                    "reference_size_pt": profile.reference_size_pt,
+                    "list_size_pt": profile.list_size_pt,
+                    "table_size_pt": profile.table_size_pt,
+                    "top_margin_cm": profile.top_margin_cm,
+                    "bottom_margin_cm": profile.bottom_margin_cm,
+                    "left_margin_cm": profile.left_margin_cm,
+                    "right_margin_cm": profile.right_margin_cm,
                 }
                 for profile in PUBLICATION_PROFILES.values()
             ]
-        }
+        )
 
     return router
 

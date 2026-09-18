@@ -6,7 +6,16 @@ const API_BASE_URL = import.meta.env.DEV
 
 export const api = {
   health: () => request<HealthResponse>('/api/health'),
-  getPresets: () => request<{ profiles: PresetResponse[] }>('/api/presets'),
+  async getPresets() {
+    const response = await request<{ profiles: PresetResponse[] }>('/api/presets')
+    if (!Array.isArray(response.profiles) || response.profiles.length === 0) throw new Error('The backend returned no publication specifications.')
+    for (const profile of response.profiles) {
+      if (!profile.name || !profile.body_font || typeof profile.body_size_pt !== 'number' || typeof profile.body_line_spacing !== 'number') {
+        throw new Error('The backend returned an invalid publication specification.')
+      }
+    }
+    return response
+  },
   async uploadDocument(file: File) { const form = new FormData(); form.append('file', file, file.name); return request<UploadResponse>('/api/documents/upload', { method: 'POST', body: form }) },
   analyzeDocument: (id: string) => request<AnalysisResponse>(`/api/documents/${id}/analyze`, { method: 'POST' }),
   formatDocument: (id: string, profile: string, model = 'logistic_regression') => { const body: FormatRequest = { profile, model }; return request<StatusResponse>(`/api/documents/${id}/format`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }) },

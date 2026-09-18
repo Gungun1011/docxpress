@@ -84,9 +84,16 @@ def test_cors_rejects_wildcard_configuration(monkeypatch: pytest.MonkeyPatch):
 def test_health_and_presets(tmp_path: Path):
     client = _client(tmp_path)
     assert client.get("/health").json()["status"] == "ok"
-    profile_names = [item["name"] for item in client.get("/api/presets").json()["profiles"]]
+    presets = client.get("/api/presets").json()["profiles"]
+    profile_names = [item["name"] for item in presets]
     assert "hackathon_default" in profile_names
     assert "trade" in profile_names
+    default = next(item for item in presets if item["name"] == "hackathon_default")
+    assert default["body_font"] == "Times New Roman"
+    assert default["title_size_pt"] == 18.0
+    assert default["caption_size_pt"] == 10.0
+    assert default["table_size_pt"] == 10.0
+    assert default["top_margin_cm"] == 1.52
 
 
 def test_upload_analyze_format_status_report_download_e2e(tmp_path: Path):
